@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Home,
   SearchResults,
+  Login,
   Notifications,
   Wishlist,
   PriceAlerts,
@@ -12,7 +13,7 @@ import { allListings } from './data';
 import type { Listing } from './types';
 import { colors, font } from './tokens';
 
-type Page = 'home' | 'search' | 'wishlist' | 'alerts' | 'notifications' | 'detail';
+type Page = 'home' | 'search' | 'login' | 'wishlist' | 'alerts' | 'notifications' | 'detail';
 
 /**
  * Application shell + router. The handoff bundle ships pages without a router,
@@ -25,8 +26,14 @@ export default function App() {
   const [query, setQuery] = useState('아이폰 15 프로');
   const [detailItem, setDetailItem] = useState<Listing>(allListings[0]);
   const [backTo, setBackTo] = useState<Page>('search');
+  const [returnTo, setReturnTo] = useState<Page>('home');
 
   const navTo = (target: NavTarget) => setPage(target);
+
+  const goLogin = () => {
+    setReturnTo(page);
+    setPage('login');
+  };
 
   const openDetail = (item: Listing) => {
     setDetailItem(item);
@@ -45,7 +52,7 @@ export default function App() {
     onHome: () => setPage('home'),
     onNavigate: navTo,
     onBell: () => setPage('notifications'),
-    onLogin: () => setLoggedIn(true),
+    onLogin: goLogin,
   });
 
   return (
@@ -57,7 +64,7 @@ export default function App() {
           onNavigate={navTo}
           onSearch={doSearch}
           onBell={() => setPage('notifications')}
-          onLogin={() => setLoggedIn(true)}
+          onLogin={goLogin}
           onOpenItem={openDetail}
         />
       )}
@@ -68,8 +75,15 @@ export default function App() {
           initialQuery={query}
           onHome={() => setPage('home')}
           onBell={() => setPage('notifications')}
-          onLogin={() => setLoggedIn(true)}
+          onLogin={goLogin}
           onOpenItem={openDetail}
+        />
+      )}
+
+      {page === 'login' && (
+        <Login
+          onHome={() => setPage('home')}
+          onAuth={() => { setLoggedIn(true); setPage(returnTo); }}
         />
       )}
 

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+  html,body{margin:0}
+  *{box-sizing:border-box}
+  input::placeholder{color:#B0B8C1}
+</style>
+</helmet>
+
+<div style="font-family:'Pretendard Variable',Pretendard,-apple-system,system-ui,sans-serif;min-height:100vh;background:#14110A;color:#14110A;display:flex;align-items:center;padding:0 8vw;position:relative;overflow:hidden">
+
+  <!-- brand panel -->
+  <div style="flex:1;color:#fff;position:relative;z-index:2">
+    <div style="font-weight:800;font-size:24px;letter-spacing:-.03em">모아<span style="color:#F5C84C">서치</span></div>
+    <h1 style="font-weight:800;font-size:52px;line-height:1.1;letter-spacing:-.04em;margin:24px 0 0">중고 5곳을,<br><span style="background:#F5C84C;color:#14110A;padding:0 11px;border-radius:8px;-webkit-box-decoration-break:clone;box-decoration-break:clone">한 번에 모아서.</span></h1>
+    <p style="font-weight:500;font-size:17px;color:#A8A399;margin:24px 0 0;line-height:1.55">당근 · 번개장터 · 중고나라 · 헬로마켓 · 세컨웨어<br>흩어진 매물을 한 화면에서 검색하세요.</p>
+    <div style="display:flex;gap:8px;margin-top:30px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#FF6600"></span>
+      <span style="width:11px;height:11px;border-radius:50%;background:#D80C18"></span>
+      <span style="width:11px;height:11px;border-radius:50%;background:#0CB650"></span>
+      <span style="width:11px;height:11px;border-radius:50%;background:#2F6FE0"></span>
+      <span style="width:11px;height:11px;border-radius:50%;background:#6D3FD4"></span>
+    </div>
+  </div>
+
+  <!-- floating card -->
+  <div style="flex:none;width:420px;background:#fff;border-radius:24px;box-shadow:0 26px 60px rgba(0,0,0,.42);padding:42px 40px;position:relative;z-index:2">
+    <h2 style="font-weight:800;font-size:25px;letter-spacing:-.03em;margin:0">{{ headline }}</h2>
+    <p style="font-weight:500;font-size:14px;color:#8B95A1;margin:8px 0 0">{{ subhead }}</p>
+
+    <div style="display:flex;gap:24px;margin:24px 0 0;border-bottom:1px solid #F0F0EE">
+      <span onClick="{{ setLogin }}" style="font-weight:800;font-size:15px;padding-bottom:12px;cursor:pointer;{{ loginTabStyle }}">로그인</span>
+      <span onClick="{{ setSignup }}" style="font-weight:800;font-size:15px;padding-bottom:12px;cursor:pointer;{{ signupTabStyle }}">회원가입</span>
+    </div>
+
+    <div style="margin-top:22px">
+      <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom:15px">
+          <div style="font-weight:600;font-size:12.5px;color:#6B7684;margin-bottom:8px">닉네임</div>
+          <input value="{{ nickname }}" onChange="{{ onNickname }}" placeholder="모아서치에서 쓸 이름" style="width:100%;height:50px;background:#F4F5F7;border:0;border-radius:13px;padding:0 15px;font-size:14.5px;font-family:inherit;outline:none" />
+        </div>
+      </sc-if>
+
+      <div style="margin-bottom:15px">
+        <div style="font-weight:600;font-size:12.5px;color:#6B7684;margin-bottom:8px">이메일</div>
+        <input value="{{ email }}" onChange="{{ onEmail }}" placeholder="you@example.com" style="width:100%;height:50px;background:#F4F5F7;border:0;border-radius:13px;padding:0 15px;font-size:14.5px;font-family:inherit;outline:none" />
+      </div>
+
+      <div style="margin-bottom:13px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-weight:600;font-size:12.5px;color:#6B7684">비밀번호</span>
+          <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}"><span onClick="{{ flashSoon }}" style="font-weight:600;font-size:12.5px;color:#A98A14;cursor:pointer">비밀번호 찾기</span></sc-if>
+        </div>
+        <div style="display:flex;align-items:center;height:50px;background:#F4F5F7;border-radius:13px;padding:0 15px">
+          <input value="{{ password }}" onChange="{{ onPassword }}" type="{{ pwType }}" placeholder="••••••••" style="flex:1;border:0;outline:none;font-size:14.5px;font-family:inherit;background:transparent" />
+          <span onClick="{{ togglePw }}" style="font-weight:600;font-size:12.5px;color:#8B95A1;cursor:pointer;user-select:none">{{ pwToggleLabel }}</span>
+        </div>
+      </div>
+
+      <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ toggleAgree }}" style="display:flex;align-items:center;gap:9px;margin:4px 0;cursor:pointer;user-select:none">
+          <div style="width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex:none;{{ agreeBox }}"><sc-if value="{{ agree }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"></polyline></svg></sc-if></div>
+          <span style="font-weight:500;font-size:13px;color:#6B7684"><b style="font-weight:700;color:#14110A">[필수]</b> 이용약관 및 개인정보 처리방침 동의</span>
+        </div>
+      </sc-if>
+
+      <button onClick="{{ submit }}" style="width:100%;height:54px;border:0;border-radius:14px;background:#F5C84C;font-weight:800;font-size:16px;color:#14110A;cursor:pointer;font-family:inherit;margin-top:13px">{{ submitLabel }}</button>
+
+      <div style="display:flex;align-items:center;gap:12px;margin:20px 0">
+        <div style="flex:1;height:1px;background:#F0F0EE"></div>
+        <span style="font-weight:500;font-size:12px;color:#B0B8C1">{{ socialLabel }}</span>
+        <div style="flex:1;height:1px;background:#F0F0EE"></div>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button onClick="{{ flashSoon }}" style="flex:1;height:50px;border:1.5px solid #E5E8EB;border-radius:13px;background:#fff;font-weight:700;font-size:14px;color:#333D4B;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px"><span style="width:18px;height:18px;border-radius:50%;background:#FEE500;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#14110A">K</span>카카오</button>
+        <button onClick="{{ flashSoon }}" style="flex:1;height:50px;border:1.5px solid #E5E8EB;border-radius:13px;background:#fff;font-weight:700;font-size:14px;color:#333D4B;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px"><span style="width:18px;height:18px;border-radius:5px;background:#03C75A;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff">N</span>네이버</button>
+      </div>
+
+      <div style="text-align:center;margin-top:22px;font-weight:500;font-size:13.5px;color:#8B95A1">{{ switchPrompt }} <span onClick="{{ switchMode }}" style="font-weight:700;color:#14110A;cursor:pointer">{{ switchAction }}</span></div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:-140px;top:-140px;width:460px;height:460px;border-radius:50%;background:radial-gradient(circle,rgba(245,200,76,.15),transparent 70%)"></div>
+  <div style="position:absolute;right:-120px;bottom:-160px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(245,200,76,.10),transparent 70%)"></div>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#fff;color:#14110A;padding:13px 22px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);z-index:9">{{ toast }}</div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { mode: 'login', nickname: '', email: '', password: '', showPw: false, agree: false, toast: '' };
+
+  flash = (m) => { this.setState({ toast: m }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2200); };
+  setLogin = () => this.setState({ mode: 'login' });
+  setSignup = () => this.setState({ mode: 'signup' });
+  switchMode = () => this.setState((s) => ({ mode: s.mode === 'login' ? 'signup' : 'login' }));
+  onNickname = (e) => this.setState({ nickname: e.target.value });
+  onEmail = (e) => this.setState({ email: e.target.value });
+  onPassword = (e) => this.setState({ password: e.target.value });
+  togglePw = () => this.setState((s) => ({ showPw: !s.showPw }));
+  toggleAgree = () => this.setState((s) => ({ agree: !s.agree }));
+  flashSoon = () => this.flash('준비 중인 기능이에요');
+  submit = () => {
+    const s = this.state, signup = s.mode === 'signup';
+    if (signup && !s.nickname.trim()) return this.flash('닉네임을 입력해 주세요');
+    if (!s.email.trim()) return this.flash('이메일을 입력해 주세요');
+    if (!s.password) return this.flash('비밀번호를 입력해 주세요');
+    if (signup && !s.agree) return this.flash('약관에 동의해 주세요');
+    this.flash(signup ? '회원가입 완료! 환영해요' : '로그인되었어요');
+  };
+
+  renderVals() {
+    const s = this.state, login = s.mode === 'login';
+    const activeTab = 'color:#14110A;border-bottom:2.5px solid #14110A';
+    const idleTab = 'color:#B0B8C1;border-bottom:2.5px solid transparent';
+    return {
+      isLogin: login, isSignup: !login,
+      headline: login ? '다시 오신 걸 환영해요' : '모아서치 시작하기',
+      subhead: login ? '로그인하고 매물을 한 번에 검색하세요' : '몇 가지만 입력하면 바로 시작해요',
+      loginTabStyle: login ? activeTab : idleTab,
+      signupTabStyle: login ? idleTab : activeTab,
+      nickname: s.nickname, email: s.email, password: s.password,
+      onNickname: this.onNickname, onEmail: this.onEmail, onPassword: this.onPassword,
+      pwType: s.showPw ? 'text' : 'password', pwToggleLabel: s.showPw ? '숨기기' : '표시',
+      togglePw: this.togglePw,
+      agree: s.agree, agreeBox: s.agree ? 'background:#14110A' : 'background:#fff;border:1.8px solid #D1D6DB', toggleAgree: this.toggleAgree,
+      submit: this.submit, submitLabel: login ? '로그인' : '회원가입 완료',
+      socialLabel: login ? '간편 로그인' : '간편 회원가입',
+      switchPrompt: login ? '아직 계정이 없으신가요?' : '이미 계정이 있으신가요?',
+      switchAction: login ? '회원가입' : '로그인',
+      switchMode: this.switchMode, setLogin: this.setLogin, setSignup: this.setSignup, flashSoon: this.flashSoon,
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

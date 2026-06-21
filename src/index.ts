@@ -11,6 +11,7 @@
  */
 export { Home } from './pages/Home';
 export { SearchResults } from './pages/SearchResults';
+export { Login } from './pages/Login';
 export { Notifications } from './pages/Notifications';
 export { Wishlist } from './pages/Wishlist';
 export { PriceAlerts } from './pages/PriceAlerts';

@@ -43,3 +43,9 @@
   color: #8e897e;
   opacity: 1;
 }
+
+/* Auth form input placeholder (Login.tsx) */
+.moa-input::placeholder {
+  color: #b0b8c1;
+  opacity: 1;
+}
