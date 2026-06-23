@@ -39,9 +39,12 @@ export const onRequestGet: PagesFunction = async (context) => {
   if (hit) return hit;
 
   // 마켓별 어댑터를 병렬 실행, 한 곳이 실패해도 나머지는 살린다.
-  const SEARCHERS = [searchBunjang, searchHellomarket];
+  const SEARCHERS = [searchBunjang, searchHellomarket, searchDaangn];
   const settled = await Promise.allSettled(SEARCHERS.map((fn) => fn(q)));
-  const results = settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+  settled.forEach((s, i) => {
+    if (s.status === 'rejected') console.error(`[search] 어댑터 #${i} 실패:`, s.reason);
+  });
+  const results = settled.flatMap((s) => (s.status === 'fulfilled' ? s.value : []));
 
   const res = Response.json(
     { query: q, count: results.length, results },
@@ -79,6 +82,36 @@ function relativeTime(epoch?: number): string {
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
   return `${Math.floor(diff / 86400)}일 전`;
+}
+
+/**
+ * `marker` 뒤 첫 `{` 부터 중괄호 균형이 맞는 지점까지의 JSON 문자열을 잘라낸다.
+ * (문자열 내부의 중괄호·이스케이프를 고려) Remix `__remixContext` 추출용.
+ */
+function extractBalancedJson(src: string, marker: string): string | null {
+  const at = src.indexOf(marker);
+  if (at < 0) return null;
+  const start = src.indexOf('{', at);
+  if (start < 0) return null;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let k = start; k < src.length; k++) {
+    const c = src[k];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === '\\') esc = true;
+      else if (c === '"') inStr = false;
+    } else if (c === '"') {
+      inStr = true;
+    } else if (c === '{') {
+      depth++;
+    } else if (c === '}') {
+      depth--;
+      if (depth === 0) return src.slice(start, k + 1);
+    }
+  }
+  return null;
 }
 
 /** 번개장터 비공식 내부 검색 API → 통합 Listing. */
@@ -151,5 +184,62 @@ async function searchHellomarket(q: string): Promise<Listing[]> {
     postedAt: relativeTime(it.timestamp),
     thumb: it.imageUrl ?? '', // 완전한 URL, 토큰 치환 불필요
     listingUrl: `https://www.hellomarket.com/item/${it.itemIdx}`,
+  }));
+}
+
+interface DaangnArticle {
+  id: string;
+  href: string;
+  price: string; // "500000.0"
+  title: string;
+  thumbnail?: string;
+  locationName?: string;
+  createdAt?: string; // ISO
+}
+
+/** loaderData(중첩) 어디에 있든 fleamarketArticles 배열을 재귀로 찾는다. */
+function findFleamarketArticles(node: unknown, depth = 0): DaangnArticle[] | null {
+  if (!node || typeof node !== 'object' || depth > 6) return null;
+  const rec = node as Record<string, unknown>;
+  if (Array.isArray(rec.fleamarketArticles)) return rec.fleamarketArticles as DaangnArticle[];
+  for (const v of Object.values(rec)) {
+    const found = findFleamarketArticles(v, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * 당근마켓 — SEO용 SSR 경로 `/search/{키워드}/`(→ `/kr/buy-sell/?search=`로 307 리다이렉트,
+ * Worker fetch가 자동 추적). Remix 페이지의 `window.__remixContext` loaderData 안
+ * `fleamarketArticles` 배열을 파싱한다. Remix 라우트 키가 바뀔 수 있어 loaderData를 훑어 찾는다.
+ */
+async function searchDaangn(q: string): Promise<Listing[]> {
+  const r = await fetch(`https://www.daangn.com/search/${encodeURIComponent(q)}/`, {
+    headers: {
+      'user-agent': 'Mozilla/5.0 (compatible; MoaSearch/0.1)',
+      accept: 'text/html',
+    },
+  });
+  if (!r.ok) throw new Error(`daangn ${r.status}`);
+
+  const html = await r.text();
+  const raw = extractBalancedJson(html, '__remixContext');
+  if (!raw) throw new Error('daangn: __remixContext 누락');
+
+  const ctx = JSON.parse(raw) as { state?: { loaderData?: unknown } };
+  // fleamarketArticles는 loaderData["routes/kr.buy-sell._index"].allPage 아래 중첩됨.
+  // 라우트 키/중첩 변경에 견고하도록 재귀로 찾는다.
+  const articles = findFleamarketArticles(ctx.state?.loaderData) ?? [];
+
+  return articles.map((it) => ({
+    id: `danggn-${it.id}`,
+    title: it.title,
+    price: Math.round(Number(it.price)) || 0,
+    market: 'danggn',
+    location: it.locationName ?? '',
+    postedAt: it.createdAt ? relativeTime(Date.parse(it.createdAt)) : '',
+    thumb: it.thumbnail ?? '', // 완전한 URL
+    listingUrl: it.href,
   }));
 }
