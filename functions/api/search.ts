@@ -39,7 +39,7 @@ export const onRequestGet: PagesFunction = async (context) => {
   if (hit) return hit;
 
   // 마켓별 어댑터를 병렬 실행, 한 곳이 실패해도 나머지는 살린다.
-  const SEARCHERS = [searchBunjang, searchHellomarket, searchDaangn];
+  const SEARCHERS = [searchBunjang, searchHellomarket, searchDaangn, searchJoongna];
   const settled = await Promise.allSettled(SEARCHERS.map((fn) => fn(q)));
   settled.forEach((s, i) => {
     if (s.status === 'rejected') console.error(`[search] 어댑터 #${i} 실패:`, s.reason);
@@ -242,4 +242,88 @@ async function searchDaangn(q: string): Promise<Listing[]> {
     thumb: it.thumbnail ?? '', // 완전한 URL
     listingUrl: it.href,
   }));
+}
+
+interface JoongnaItem {
+  seq: number;
+  title: string;
+  price: number;
+  url?: string; // 이미지 URL
+  sortDate?: string; // "2026-06-23 22:51:53" (KST, 타임존 표기 없음)
+  mainLocationName?: string;
+}
+
+/** Next.js RSC 스트림(self.__next_f.push([1,"…"]))을 풀어 한 덩어리 텍스트로 복원. */
+function decodeRscFlight(html: string): string {
+  const re = /self\.__next_f\.push\(\[1,"((?:\\.|[^"\\])*)"\]\)/g;
+  let m: RegExpExecArray | null;
+  let flight = '';
+  while ((m = re.exec(html)) !== null) {
+    try {
+      flight += JSON.parse('"' + m[1] + '"');
+    } catch {
+      /* 깨진 청크는 건너뜀 */
+    }
+  }
+  return flight;
+}
+
+/** flight 텍스트에서 `"items":[ {seq…} … ]` 배열 문자열을 중괄호/대괄호 균형으로 잘라낸다. */
+function extractItemsArray(flight: string): string | null {
+  const at = flight.search(/"items"\s*:\s*\[\s*\{"seq":\d/);
+  if (at < 0) return null;
+  const start = flight.indexOf('[', at);
+  if (start < 0) return null;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let k = start; k < flight.length; k++) {
+    const c = flight[k];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === '\\') esc = true;
+      else if (c === '"') inStr = false;
+    } else if (c === '"') {
+      inStr = true;
+    } else if (c === '[') {
+      depth++;
+    } else if (c === ']') {
+      depth--;
+      if (depth === 0) return flight.slice(start, k + 1);
+    }
+  }
+  return null;
+}
+
+/**
+ * 중고나라 — web.joongna.com 검색 페이지의 Next.js RSC 스트림에서 매물을 파싱.
+ * 공식 검색 JSON API가 없어 RSC 구조에 의존(가장 깨지기 쉬움 → 파서 내성 유지).
+ */
+async function searchJoongna(q: string): Promise<Listing[]> {
+  const r = await fetch(`https://web.joongna.com/search/${encodeURIComponent(q)}`, {
+    headers: {
+      'user-agent': 'Mozilla/5.0 (compatible; MoaSearch/0.1)',
+      accept: 'text/html',
+    },
+  });
+  if (!r.ok) throw new Error(`joongna ${r.status}`);
+
+  const flight = decodeRscFlight(await r.text());
+  const arr = extractItemsArray(flight);
+  if (!arr) throw new Error('joongna: items 배열 누락');
+
+  const items = JSON.parse(arr) as JoongnaItem[];
+  return items
+    .filter((it) => it && typeof it.price === 'number' && !!it.title)
+    .map((it) => ({
+      id: `joonggo-${it.seq}`,
+      title: it.title,
+      price: it.price,
+      market: 'joonggo',
+      location: it.mainLocationName ?? '',
+      // sortDate는 타임존 없는 KST → +09:00 로 해석
+      postedAt: it.sortDate ? relativeTime(Date.parse(it.sortDate.replace(' ', 'T') + '+09:00')) : '',
+      thumb: it.url ?? '', // 완전한 이미지 URL
+      listingUrl: `https://web.joongna.com/product/${it.seq}`,
+    }));
 }
