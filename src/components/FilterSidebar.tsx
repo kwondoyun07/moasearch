@@ -9,6 +9,8 @@ interface Props {
   onToggleMarket?: (key: keyof typeof markets) => void;
   onPriceChange?: (min: number, max: number) => void;
   onReset?: () => void;
+  /** 실제 불러온 결과의 마켓별 개수. 있으면 mock 카운트 대신 표시. */
+  counts?: Partial<Record<keyof typeof markets, number>>;
 }
 
 const eyebrow: React.CSSProperties = {
@@ -26,7 +28,7 @@ const priceInput: React.CSSProperties = {
 };
 
 /** Left filter rail on the search-results screen. */
-export const FilterSidebar: React.FC<Props> = ({ filters, onToggleMarket, onPriceChange, onReset }) => {
+export const FilterSidebar: React.FC<Props> = ({ filters, onToggleMarket, onPriceChange, onReset, counts }) => {
   const setMin = (v: number) => onPriceChange?.(Math.min(v, filters.priceMax), filters.priceMax);
   const setMax = (v: number) => onPriceChange?.(filters.priceMin, Math.min(Math.max(v, filters.priceMin), 3_000_000));
 
@@ -80,7 +82,9 @@ export const FilterSidebar: React.FC<Props> = ({ filters, onToggleMarket, onPric
             <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: f.selected ? colors.ink : colors.textMuted }}>
               {m.label === '당근' ? '당근마켓' : m.label}
             </span>
-            <span style={{ fontWeight: 600, fontSize: 12, color: colors.textGhost }}>{f.count}</span>
+            <span style={{ fontWeight: 600, fontSize: 12, color: colors.textGhost }}>
+              {counts ? (counts[f.key] ?? 0).toLocaleString('ko-KR') : f.count}
+            </span>
           </div>
         );
       })}

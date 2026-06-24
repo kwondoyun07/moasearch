@@ -161,6 +161,16 @@ export const SearchResults: React.FC<Props> = ({ loggedIn, initialQuery, onHome,
     return list;
   }, [results, filters.markets, filters.priceMin, filters.priceMax, filters.sort]);
 
+  // 사이드바에 보여줄 마켓별 실제 개수(현재까지 불러온 결과 기준).
+  const marketCounts = useMemo(() => {
+    const c: Partial<Record<MarketKey, number>> = {};
+    for (const it of results) {
+      const k = it.market as MarketKey;
+      c[k] = (c[k] ?? 0) + 1;
+    }
+    return c;
+  }, [results]);
+
   return (
     <div style={{ fontFamily: font.family, color: colors.ink, background: colors.bg, maxWidth: 1440, width: '100%', margin: '0 auto' }}>
       {/* nav with search */}
@@ -199,7 +209,7 @@ export const SearchResults: React.FC<Props> = ({ loggedIn, initialQuery, onHome,
 
       {/* body */}
       <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-        <FilterSidebar filters={filters} onToggleMarket={toggleMarket} onPriceChange={setPrice} />
+        <FilterSidebar filters={filters} onToggleMarket={toggleMarket} onPriceChange={setPrice} counts={results.length ? marketCounts : undefined} />
 
         <main style={{ flex: 1, minWidth: 0, padding: '34px 48px 48px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -253,14 +263,16 @@ export const SearchResults: React.FC<Props> = ({ loggedIn, initialQuery, onHome,
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: '26px 24px', marginTop: 30 }}>
                 {sorted.map((item) => (
-                  <ProductCard
-                    key={item.id}
-                    item={item}
-                    showLike
-                    liked={isLiked(item)}
-                    onClick={onOpenItem}
-                    onToggleLike={toggle}
-                  />
+                  // content-visibility: 화면 밖 카드는 렌더를 건너뛰어 수천 개도 가볍게(가상 스크롤 대체).
+                  <div key={item.id} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 320px' } as React.CSSProperties}>
+                    <ProductCard
+                      item={item}
+                      showLike
+                      liked={isLiked(item)}
+                      onClick={onOpenItem}
+                      onToggleLike={toggle}
+                    />
+                  </div>
                 ))}
               </div>
 
