@@ -6,7 +6,7 @@
  * 맞는 새 매물을 notifications 테이블에 적재한다. → 프론트 알림 페이지에 표시됨.
  *
  * 배포(사용자 작업):
- *   cd alerts-worker
+ *   cd moasearch-cron
  *   npx wrangler deploy
  *   npx wrangler secret put SUPABASE_URL
  *   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY   # ⚠️ service_role 키(서버 전용, 프론트 금지)
