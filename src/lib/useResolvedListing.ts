@@ -48,22 +48,23 @@ export function useResolvedListing(): ResolvedListing {
   });
 
   useEffect(() => {
-    if (syncItem || !query) {
-      setRemote({ status: 'idle', item: null });
-      return;
-    }
     let active = true;
-    setRemote({ status: 'loading', item: null });
-    searchListings(query)
-      .then((list) => {
-        if (active) {
-          const found = list.find((l) => l.id === key || l.listingUrl === key) ?? null;
-          setRemote({ status: 'done', item: found });
-        }
-      })
-      .catch(() => {
+    async function resolve() {
+      if (syncItem || !query) {
+        if (active) setRemote({ status: 'idle', item: null });
+        return;
+      }
+      if (active) setRemote({ status: 'loading', item: null });
+      try {
+        const { results } = await searchListings(query);
+        if (!active) return;
+        const found = results.find((l) => l.id === key || l.listingUrl === key) ?? null;
+        setRemote({ status: 'done', item: found });
+      } catch {
         if (active) setRemote({ status: 'done', item: null });
-      });
+      }
+    }
+    resolve();
     return () => {
       active = false;
     };

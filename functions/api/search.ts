@@ -29,29 +29,37 @@ interface MarketResult {
   hasMore: boolean;
 }
 
+/** 정렬 키 — 프론트의 최신순/낮은가격순/인기순에 대응. */
+type SortKey = 'latest' | 'price_asc' | 'popular';
+type Adapter = (q: string, page: number, sort: SortKey) => Promise<MarketResult>;
+
 const CACHE_TTL = 180; // 초
 
 export const onRequestGet: PagesFunction = async (context) => {
   const url = new URL(context.request.url);
   const q = (url.searchParams.get('q') ?? '').trim();
   const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
+  const sortParam = url.searchParams.get('sort');
+  const sort: SortKey = sortParam === 'price_asc' || sortParam === 'popular' ? sortParam : 'latest';
 
   if (!q) {
     return Response.json(
-      { error: 'q (검색어) 가 필요해요', query: '', page, count: 0, results: [], hasMore: false },
+      { error: 'q (검색어) 가 필요해요', query: '', page, sort, count: 0, results: [], hasMore: false },
       { status: 400 },
     );
   }
 
-  // 같은 (검색어, 페이지)는 캐시에서 즉시 응답 (호출 빈도·차단 위험 ↓)
+  // 같은 (검색어, 정렬, 페이지)는 캐시에서 즉시 응답 (호출 빈도·차단 위험 ↓)
   const cache = caches.default;
-  const cacheKey = new Request(`https://moa-search.cache/api/search?q=${encodeURIComponent(q)}&page=${page}`);
+  const cacheKey = new Request(
+    `https://moa-search.cache/api/search?q=${encodeURIComponent(q)}&sort=${sort}&page=${page}`,
+  );
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
   // 마켓별 어댑터를 병렬 실행, 한 곳이 실패해도 나머지는 살린다.
-  const SEARCHERS = [searchBunjang, searchHellomarket, searchDaangn, searchJoongna];
-  const settled = await Promise.allSettled(SEARCHERS.map((fn) => fn(q, page)));
+  const SEARCHERS: Adapter[] = [searchBunjang, searchHellomarket, searchDaangn, searchJoongna];
+  const settled = await Promise.allSettled(SEARCHERS.map((fn) => fn(q, page, sort)));
   settled.forEach((s, i) => {
     if (s.status === 'rejected') console.error(`[search] 어댑터 #${i} 실패:`, s.reason);
   });
@@ -60,7 +68,7 @@ export const onRequestGet: PagesFunction = async (context) => {
   const hasMore = ok.some((r) => r.hasMore); // 한 곳이라도 더 있으면 계속
 
   const res = Response.json(
-    { query: q, page, count: results.length, results, hasMore },
+    { query: q, page, sort, count: results.length, results, hasMore },
     { headers: { 'cache-control': `public, max-age=${CACHE_TTL}` } },
   );
   context.waitUntil(cache.put(cacheKey, res.clone()));
@@ -130,11 +138,13 @@ interface BunjangItem {
 }
 
 /** 번개장터 비공식 내부 검색 API → 통합 Listing. (page: 1-based, API는 0-based) */
-async function searchBunjang(q: string, page: number): Promise<MarketResult> {
+async function searchBunjang(q: string, page: number, sort: SortKey): Promise<MarketResult> {
   const n = 40;
+  // 번개는 order 파라미터로 서버 정렬 지원(실측 확인).
+  const order = sort === 'price_asc' ? 'price_asc' : sort === 'popular' ? 'popular_score' : 'date';
   const api =
     `https://api.bunjang.co.kr/api/1/find_v2.json?q=${encodeURIComponent(q)}` +
-    `&order=score&page=${page - 1}&n=${n}&stat_device=w&version=4`;
+    `&order=${order}&page=${page - 1}&n=${n}&stat_device=w&version=4`;
 
   const r = await fetch(api, {
     headers: { 'user-agent': 'Mozilla/5.0 (compatible; MoaSearch/0.1)', accept: 'application/json' },
@@ -170,7 +180,9 @@ interface HelloItem {
  * 헬로마켓(=세컨웨어, 동일 도메인) — 공식 검색 JSON API가 없어 SSR HTML의
  * <script id="__NEXT_DATA__"> JSON을 파싱한다. (page: 1-based, &page=N)
  */
-async function searchHellomarket(q: string, page: number): Promise<MarketResult> {
+async function searchHellomarket(q: string, page: number, _sort: SortKey): Promise<MarketResult> {
+  // 헬로마켓은 잘못된 sort 값에 빈 결과를 줘서 정렬은 안 넘기고 클라이언트 정렬에 맡긴다.
+  void _sort;
   const r = await fetch(`https://www.hellomarket.com/search?q=${encodeURIComponent(q)}&page=${page}`, {
     headers: { 'user-agent': 'Mozilla/5.0 (compatible; MoaSearch/0.1)', accept: 'text/html' },
   });
@@ -225,7 +237,8 @@ function findFleamarketArticles(node: unknown, depth = 0): DaangnArticle[] | nul
  * Worker fetch가 자동 추적). Remix `__remixContext` loaderData 안 fleamarketArticles 파싱.
  * 웹 SSR은 첫 ~270여 건만 주고 다음 페이지 커서를 노출하지 않으므로 1페이지만 지원.
  */
-async function searchDaangn(q: string, page: number): Promise<MarketResult> {
+async function searchDaangn(q: string, page: number, _sort: SortKey): Promise<MarketResult> {
+  void _sort; // 정렬 파라미터 미지원 — 273건 전체를 받아 클라이언트 정렬에 맡긴다.
   if (page > 1) return { items: [], hasMore: false }; // 커서 미노출 → 1페이지만
 
   const r = await fetch(`https://www.daangn.com/search/${encodeURIComponent(q)}/`, {
@@ -307,7 +320,8 @@ function extractItemsArray(flight: string): string | null {
  * 중고나라 — web.joongna.com 검색 페이지의 Next.js RSC 스트림에서 매물을 파싱.
  * 공식 검색 JSON API가 없어 RSC 구조에 의존(가장 깨지기 쉬움). (page: 1-based, ?page=N)
  */
-async function searchJoongna(q: string, page: number): Promise<MarketResult> {
+async function searchJoongna(q: string, page: number, _sort: SortKey): Promise<MarketResult> {
+  void _sort; // 정렬 코드가 불투명·불안정해 안 넘기고 클라이언트 정렬에 맡긴다.
   const r = await fetch(`https://web.joongna.com/search/${encodeURIComponent(q)}?page=${page}`, {
     headers: { 'user-agent': 'Mozilla/5.0 (compatible; MoaSearch/0.1)', accept: 'text/html' },
   });
