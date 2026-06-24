@@ -1,4 +1,0 @@
-# SPA 폴백 — 모든 비-자산/비-Function 경로를 index.html 로 서빙해 클라이언트
-# 라우팅(딥링크/새로고침)이 동작하게 한다. /api/* 는 Pages Functions 가
-# 우선 처리하므로 영향받지 않는다.
-/*    /index.html   200
