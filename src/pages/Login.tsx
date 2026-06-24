@@ -92,6 +92,21 @@ export const Login: React.FC<Props> = ({ onHome, onAuth }) => {
     }
   };
 
+  // 카카오 OAuth (Supabase 내장 제공). Supabase 대시보드에서 Kakao Provider 설정 필요.
+  const kakaoLogin = async () => {
+    if (busy) return;
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: { redirectTo: `${window.location.origin}/main` },
+    });
+    if (error) {
+      flash(friendly(error.message));
+      setBusy(false);
+    }
+    // 성공 시 카카오로 리다이렉트되므로 setBusy 불필요.
+  };
+
   const activeTab: React.CSSProperties = { color: colors.ink, borderBottom: `2.5px solid ${colors.ink}` };
   const idleTab: React.CSSProperties = { color: colors.textGhost, borderBottom: '2.5px solid transparent' };
 
@@ -170,10 +185,10 @@ export const Login: React.FC<Props> = ({ onHome, onAuth }) => {
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={flashSoon} style={socialBtn}>
+            <button onClick={kakaoLogin} disabled={busy} style={socialBtn}>
               <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 11, color: colors.ink }}>K</span>카카오
             </button>
-            <button onClick={flashSoon} style={socialBtn}>
+            <button onClick={() => flash('네이버 로그인은 준비 중이에요')} style={socialBtn}>
               <span style={{ width: 18, height: 18, borderRadius: 5, background: '#03C75A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 11, color: '#fff' }}>N</span>네이버
             </button>
           </div>
