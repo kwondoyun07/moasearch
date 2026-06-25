@@ -1,5 +1,7 @@
 # Handoff: Moa Search — Desktop (Bold Editorial)
 
+> ⚠️ **상태: 미완성 (Work in Progress)** — 이 프로젝트는 아직 완성되지 않았습니다. 일부 화면·기능이 구현 중이거나 미구현 상태이며, 디자인·데이터 연동이 진행 중입니다. 프로덕션 사용 전 추가 작업이 필요합니다.
+
 ## Overview
 Moa Search (모아서치) is a **multi-marketplace used-goods aggregator**: one search runs across 5 Korean
 secondhand marketplaces (당근마켓, 번개장터, 중고나라, 헬로마켓, 세컨웨어) and shows unified, filterable results.

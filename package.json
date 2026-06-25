@@ -7,9 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler dev",
     "typecheck": "tsc -b",
-    "pages:dev": "npm run build && wrangler pages dev dist"
+    "pages:dev": "npm run build && wrangler pages dev dist",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
@@ -18,6 +19,7 @@
     "react-router-dom": "^7.18.0"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.42.2",
     "@cloudflare/workers-types": "^4.20260623.1",
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.3",
@@ -31,6 +33,6 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
-    "wrangler": "^4.103.0"
+    "wrangler": "^4.104.0"
   }
 }
